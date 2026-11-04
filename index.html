@@ -1,1 +1,942 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Soru Tracker & Ders Programı</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Google Fonts: Inter & Outfit -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        outfit: ['Outfit', 'sans-serif'],
+                    },
+                    colors: {
+                        neon: {
+                            cyan: '#00f3ff',
+                            purple: '#9d4edd',
+                            pink: '#ff007f',
+                            green: '#00ff88',
+                            dark: '#0b0f19',
+                            card: '#161b26',
+                            cardHover: '#1f2638'
+                        }
+                    },
+                    boxShadow: {
+                        'neon-cyan': '0 0 15px rgba(0, 243, 255, 0.4)',
+                        'neon-purple': '0 0 15px rgba(157, 78, 221, 0.4)',
+                        'neon-pink': '0 0 15px rgba(255, 0, 127, 0.4)',
+                        'glass': '0 8px 32px 0 rgba(0, 0, 0, 0.37)',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #080c14;
+            color: #f1f5f9;
+            background-image: 
+                radial-gradient(circle at 15% 15%, rgba(157, 78, 221, 0.15) 0%, transparent 40%),
+                radial-gradient(circle at 85% 85%, rgba(0, 243, 255, 0.12) 0%, transparent 40%);
+            background-attachment: fixed;
+            min-height: 100vh;
+        }
+
+        /* Glassmorphism Effect */
+        .glass-panel {
+            background: rgba(22, 27, 38, 0.75);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .glass-input {
+            background: rgba(11, 15, 25, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #fff;
+            transition: all 0.3s ease;
+        }
+
+        .glass-input:focus {
+            border-color: #00f3ff;
+            box-shadow: 0 0 10px rgba(0, 243, 255, 0.3);
+            outline: none;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0b0f19;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1f293d;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #00f3ff;
+        }
+
+        .tab-btn.active {
+            color: #00f3ff;
+            border-bottom: 2px solid #00f3ff;
+            background: rgba(0, 243, 255, 0.05);
+        }
+    </style>
+</head>
+<body class="font-sans antialiased pb-12">
+
+    <!-- LOGIN MODAL / SCREEN (Giriş Yapılmamışsa Görünür) -->
+    <div id="loginSection" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+        <div class="glass-panel p-8 rounded-3xl max-w-md w-full text-center shadow-2xl border border-neon-purple/30 relative overflow-hidden">
+            <div class="absolute -top-12 -left-12 w-32 h-32 bg-neon-purple/20 rounded-full blur-2xl"></div>
+            <div class="absolute -bottom-12 -right-12 w-32 h-32 bg-neon-cyan/20 rounded-full blur-2xl"></div>
+
+            <div class="w-20 h-20 bg-gradient-to-tr from-neon-purple to-neon-cyan rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-neon-purple transform rotate-3">
+                <i class="fa-solid fa-graduation-cap text-3xl text-white"></i>
+            </div>
+
+            <h1 class="font-outfit text-3xl font-extrabold text-white mb-2">Hoş Geldiniz! 👋</h1>
+            <p class="text-gray-400 text-sm mb-6">Derslerinizi ve çözdüğünüz soruları takip etmek için bir kullanıcı adı belirleyin.</p>
+
+            <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4">
+                <div>
+                    <input type="text" id="usernameInput" required placeholder="Adınız veya Kullanıcı Adınız" 
+                           class="glass-input w-full px-5 py-3.5 rounded-xl text-center font-medium focus:ring-2 focus:ring-neon-cyan text-lg">
+                </div>
+                <button type="submit" class="w-full py-3.5 px-6 bg-gradient-to-r from-neon-purple to-neon-cyan text-white font-bold rounded-xl shadow-neon-purple hover:opacity-90 transition-all duration-300 transform hover:-translate-y-0.5">
+                    Başlayalım <i class="fa-solid fa-arrow-right ml-2"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MAIN APP CONTENT (Giriş Yapılınca Görünür) -->
+    <div id="appSection" class="hidden min-h-screen">
+        
+        <!-- HEADER / NAVIGATION -->
+        <header class="sticky top-0 z-40 glass-panel border-b border-white/10 mb-8">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center justify-between h-20">
+                    
+                    <!-- Logo & App Name -->
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-neon-purple to-neon-cyan flex items-center justify-center shadow-neon-cyan">
+                            <i class="fa-solid fa-bolt text-white text-lg"></i>
+                        </div>
+                        <div>
+                            <span class="font-outfit font-extrabold text-xl bg-gradient-to-r from-white via-slate-200 to-neon-cyan bg-clip-text text-transparent">
+                                StudyPulse
+                            </span>
+                            <span class="hidden sm:inline-block text-xs bg-neon-purple/20 text-neon-purple border border-neon-purple/30 px-2 py-0.5 rounded-full font-semibold ml-2">PRO</span>
+                        </div>
+                    </div>
+
+                    <!-- User Profile & Logout -->
+                    <div class="flex items-center gap-4">
+                        <div class="flex items-center gap-3 bg-white/5 border border-white/10 px-4 py-2 rounded-2xl">
+                            <div class="w-8 h-8 rounded-full bg-neon-purple/30 border border-neon-purple flex items-center justify-center text-neon-cyan font-bold text-sm">
+                                <span id="userInitial">A</span>
+                            </div>
+                            <div class="text-left hidden sm:block">
+                                <div id="displayUsername" class="text-sm font-bold text-white leading-none">Kullanıcı</div>
+                                <div class="text-[10px] text-gray-400 mt-1">Öğrenci Hesabı</div>
+                            </div>
+                        </div>
+
+                        <button onclick="logout()" title="Çıkış Yap / Değiştir" class="p-2.5 rounded-xl bg-white/5 hover:bg-red-500/20 text-gray-400 hover:text-red-400 border border-white/10 transition-all duration-300">
+                            <i class="fa-solid fa-right-from-bracket"></i>
+                        </button>
+                    </div>
+
+                </div>
+
+                <!-- NAVIGATION TABS -->
+                <div class="flex space-x-1 sm:space-x-4 border-t border-white/5 pt-2">
+                    <button onclick="switchTab('dashboard')" id="tab-dashboard" class="tab-btn active px-4 py-3 rounded-t-xl text-sm font-semibold text-gray-300 transition-all flex items-center gap-2">
+                        <i class="fa-solid fa-chart-pie"></i> <span>Genel Bakış</span>
+                    </button>
+                    <button onclick="switchTab('questions')" id="tab-questions" class="tab-btn px-4 py-3 rounded-t-xl text-sm font-semibold text-gray-300 transition-all flex items-center gap-2">
+                        <i class="fa-solid fa-pen-to-square"></i> <span>Soru Takibi</span>
+                    </button>
+                    <button onclick="switchTab('timetable')" id="tab-timetable" class="tab-btn px-4 py-3 rounded-t-xl text-sm font-semibold text-gray-300 transition-all flex items-center gap-2">
+                        <i class="fa-solid fa-calendar-days"></i> <span>Ders Programı</span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- MAIN CONTAINER -->
+        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+            <!-- TAB 1: DASHBOARD / GENEL BAKIŞ -->
+            <section id="page-dashboard" class="space-y-6">
+                <!-- Welcome Banner -->
+                <div class="glass-panel p-6 sm:p-8 rounded-3xl relative overflow-hidden border border-neon-cyan/20">
+                    <div class="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div>
+                            <h2 class="text-2xl sm:text-3xl font-outfit font-extrabold text-white">
+                                Tekrar Hoş Geldin, <span id="welcomeUser" class="text-neon-cyan">Öğrenci</span>! 🚀
+                            </h2>
+                            <p class="text-gray-400 text-sm mt-1">Bugünkü hedeflerine ulaşmak için harika bir gün. Çalışmaya devam et!</p>
+                        </div>
+                        <button onclick="switchTab('questions')" class="px-5 py-3 rounded-xl bg-neon-cyan/10 hover:bg-neon-cyan/20 border border-neon-cyan/40 text-neon-cyan font-bold text-sm transition-all duration-300 flex items-center gap-2 shadow-neon-cyan">
+                            <i class="fa-solid fa-plus"></i> Soru Ekle
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Stats Summary Cards -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <!-- Today Total Questions -->
+                    <div class="glass-panel p-5 rounded-2xl flex items-center justify-between border-l-4 border-l-neon-cyan">
+                        <div>
+                            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Bugün Çözülen</p>
+                            <h3 id="statTodayTotal" class="text-2xl font-outfit font-extrabold text-white mt-1">0</h3>
+                            <p class="text-[11px] text-gray-400 mt-1"><span id="statTodayNet" class="text-neon-cyan font-bold">0</span> Toplam Net</p>
+                        </div>
+                        <div class="w-12 h-12 rounded-xl bg-neon-cyan/10 text-neon-cyan flex items-center justify-center text-xl">
+                            <i class="fa-solid fa-check-double"></i>
+                        </div>
+                    </div>
+
+                    <!-- Daily Goal Target -->
+                    <div class="glass-panel p-5 rounded-2xl flex items-center justify-between border-l-4 border-l-neon-purple">
+                        <div>
+                            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Günlük Hedef</p>
+                            <div class="flex items-baseline gap-2 mt-1">
+                                <h3 id="statDailyGoal" class="text-2xl font-outfit font-extrabold text-white">200</h3>
+                                <span class="text-xs text-gray-400">soru</span>
+                            </div>
+                            <button onclick="setDailyGoalPrompt()" class="text-[11px] text-neon-purple hover:underline mt-1">Hedefi Değiştir</button>
+                        </div>
+                        <div class="w-12 h-12 rounded-xl bg-neon-purple/10 text-neon-purple flex items-center justify-center text-xl">
+                            <i class="fa-solid fa-bullseye"></i>
+                        </div>
+                    </div>
+
+                    <!-- Accuracy Rate -->
+                    <div class="glass-panel p-5 rounded-2xl flex items-center justify-between border-l-4 border-l-neon-green">
+                        <div>
+                            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Doğruluk Oranı</p>
+                            <h3 id="statAccuracyPercent" class="text-2xl font-outfit font-extrabold text-neon-green mt-1">%0</h3>
+                            <p class="text-[11px] text-gray-400 mt-1">Başarı Yüzdesi</p>
+                        </div>
+                        <div class="w-12 h-12 rounded-xl bg-neon-green/10 text-neon-green flex items-center justify-center text-xl">
+                            <i class="fa-solid fa-chart-pie"></i>
+                        </div>
+                    </div>
+
+                    <!-- Total All Time Net -->
+                    <div class="glass-panel p-5 rounded-2xl flex items-center justify-between border-l-4 border-l-neon-pink">
+                        <div>
+                            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Tüm Zamanlar Net</p>
+                            <h3 id="statAllTimeNet" class="text-2xl font-outfit font-extrabold text-white mt-1">0</h3>
+                            <p class="text-[11px] text-gray-400 mt-1"><span id="statAllTimeTotal" class="text-neon-pink font-bold">0</span> Soru İçinden</p>
+                        </div>
+                        <div class="w-12 h-12 rounded-xl bg-neon-pink/10 text-neon-pink flex items-center justify-center text-xl">
+                            <i class="fa-solid fa-layer-group"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Daily Progress Bar Card -->
+                <div class="glass-panel p-6 rounded-3xl">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-sm font-semibold text-gray-300">Bugünkü Hedef Durumu</span>
+                        <span id="progressBarText" class="text-xs font-bold text-neon-cyan">0 / 200 Soru</span>
+                    </div>
+                    <div class="w-full h-4 bg-gray-800 rounded-full overflow-hidden p-0.5 border border-white/5">
+                        <div id="progressBarFill" class="h-full bg-gradient-to-r from-neon-purple via-neon-cyan to-neon-green rounded-full transition-all duration-500 w-0"></div>
+                    </div>
+                </div>
+
+                <!-- Charts & Subject Breakdown Grid -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Chart Column 1: Doğru / Yanlış / Boş Dağılımı -->
+                    <div class="glass-panel p-6 rounded-3xl lg:col-span-1 flex flex-col justify-between">
+                        <h3 class="font-outfit font-bold text-lg text-white mb-4 flex items-center gap-2">
+                            <i class="fa-solid fa-chart-pie text-neon-cyan"></i> D / Y / B Dağılımı
+                        </h3>
+                        <div class="relative flex-1 flex items-center justify-center min-h-[220px]">
+                            <canvas id="accuracyChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Subject Breakdown List -->
+                    <div class="glass-panel p-6 rounded-3xl lg:col-span-2">
+                        <h3 class="font-outfit font-bold text-lg text-white mb-4 flex items-center gap-2">
+                            <i class="fa-solid fa-list-check text-neon-purple"></i> Bugünkü Ders ve Net Analizi
+                        </h3>
+                        <div id="subjectBreakdownList" class="space-y-3 max-h-[280px] overflow-y-auto pr-2">
+                            <!-- JS Will Insert Breakdown Here -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 2: QUESTION TRACKER / SORU TAKİBİ -->
+            <section id="page-questions" class="hidden space-y-6">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    
+                    <!-- Left: Add Questions Form -->
+                    <div class="glass-panel p-6 rounded-3xl lg:col-span-1 border border-neon-purple/20">
+                        <h3 class="font-outfit font-bold text-xl text-white mb-4 flex items-center gap-2">
+                            <i class="fa-solid fa-plus-circle text-neon-cyan"></i> Soru Girişi Yap
+                        </h3>
+                        
+                        <form id="addQuestionForm" onsubmit="handleAddQuestions(event)" class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-medium text-gray-400 mb-1">Ders Seçin</label>
+                                <select id="subjectSelect" required class="glass-input w-full px-4 py-3 rounded-xl focus:ring-2 focus:ring-neon-cyan">
+                                    <option value="" disabled selected class="bg-gray-900">Ders Seçiniz...</option>
+                                    <option value="Matematik" class="bg-gray-900">Matematik</option>
+                                    <option value="Geometri" class="bg-gray-900">Geometri</option>
+                                    <option value="Türkçe" class="bg-gray-900">Türkçe</option>
+                                    <option value="Paragraf" class="bg-gray-900">Paragraf</option>
+                                    <option value="Fizik" class="bg-gray-900">Fizik</option>
+                                    <option value="Kimya" class="bg-gray-900">Kimya</option>
+                                    <option value="Biyoloji" class="bg-gray-900">Biyoloji</option>
+                                    <option value="Tarih" class="bg-gray-900">Tarih</option>
+                                    <option value="Coğrafya" class="bg-gray-900">Coğrafya</option>
+                                    <option value="Felsefe/Din" class="bg-gray-900">Felsefe / Din</option>
+                                    <option value="İngilizce" class="bg-gray-900">İngilizce</option>
+                                    <option value="Diğer" class="bg-gray-900">Diğer / Özel</option>
+                                </select>
+                            </div>
+
+                            <!-- Doğru - Yanlış - Boş Inputs Grid -->
+                            <div class="grid grid-cols-3 gap-2">
+                                <div>
+                                    <label class="block text-xs font-medium text-neon-green mb-1"><i class="fa-solid fa-check"></i> Doğru</label>
+                                    <input type="number" id="correctInput" min="0" value="0" required 
+                                           class="glass-input w-full px-3 py-2.5 rounded-xl font-bold text-center text-neon-green text-base">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-red-400 mb-1"><i class="fa-solid fa-xmark"></i> Yanlış</label>
+                                    <input type="number" id="wrongInput" min="0" value="0" required 
+                                           class="glass-input w-full px-3 py-2.5 rounded-xl font-bold text-center text-red-400 text-base">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-amber-400 mb-1"><i class="fa-regular fa-circle"></i> Boş</label>
+                                    <input type="number" id="blankInput" min="0" value="0" required 
+                                           class="glass-input w-full px-3 py-2.5 rounded-xl font-bold text-center text-amber-400 text-base">
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-medium text-gray-400 mb-1">Tarih</label>
+                                <input type="date" id="logDateInput" required class="glass-input w-full px-4 py-3 rounded-xl">
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-medium text-gray-400 mb-1">Not / Konu (Opsiyonel)</label>
+                                <input type="text" id="noteInput" placeholder="Örn: Türev, Paragraf Test 3" class="glass-input w-full px-4 py-3 rounded-xl">
+                            </div>
+
+                            <button type="submit" class="w-full py-3.5 px-4 bg-gradient-to-r from-neon-purple to-neon-cyan text-white font-bold rounded-xl shadow-neon-purple hover:opacity-90 transition-all duration-300">
+                                Kaydet & Ekle <i class="fa-solid fa-check ml-1"></i>
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Right: Log History Table -->
+                    <div class="glass-panel p-6 rounded-3xl lg:col-span-2">
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="font-outfit font-bold text-xl text-white flex items-center gap-2">
+                                <i class="fa-solid fa-clock-rotate-left text-neon-pink"></i> Son Çalışma Kayıtları
+                            </h3>
+                            <button onclick="clearAllLogs()" class="text-xs text-red-400 hover:text-red-300 border border-red-500/20 px-3 py-1.5 rounded-lg hover:bg-red-500/10 transition-all">
+                                <i class="fa-solid fa-trash-can mr-1"></i> Tümünü Temizle
+                            </button>
+                        </div>
+
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="border-b border-white/10 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                                        <th class="pb-3 px-2">Tarih</th>
+                                        <th class="pb-3 px-2">Ders & Not</th>
+                                        <th class="pb-3 px-2 text-center">D / Y / B</th>
+                                        <th class="pb-3 px-2 text-right">Toplam</th>
+                                        <th class="pb-3 px-2 text-right">Net</th>
+                                        <th class="pb-3 px-2 text-center">İşlem</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="logsTableBody" class="divide-y divide-white/5 text-sm">
+                                    <!-- Logs JS ile dolacak -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+
+            <!-- TAB 3: TIMETABLE / DERS PROGRAMI -->
+            <section id="page-timetable" class="hidden space-y-6">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                        <h2 class="font-outfit font-extrabold text-2xl text-white">Haftalık Çalışma Programım</h2>
+                        <p class="text-gray-400 text-sm">Hangi gün hangi dersleri çalışacağını planla.</p>
+                    </div>
+                    <button onclick="openTimetableModal()" class="px-5 py-2.5 rounded-xl bg-neon-purple/20 hover:bg-neon-purple/30 border border-neon-purple/40 text-neon-purple font-bold text-sm transition-all flex items-center gap-2">
+                        <i class="fa-solid fa-plus"></i> Program Katı / Konu Ekle
+                    </button>
+                </div>
+
+                <!-- Days Cards Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-4" id="timetableDaysGrid">
+                    <!-- JS will render 7 Days (Pazartesi - Pazar) -->
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- TIMETABLE MODAL (Ders Programına Eleman Ekleme) -->
+    <div id="timetableModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+        <div class="glass-panel p-6 rounded-3xl max-w-md w-full border border-neon-cyan/30">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-outfit font-bold text-lg text-white">Programına Ders Ekle</h3>
+                <button onclick="closeTimetableModal()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+
+            <form id="timetableForm" onsubmit="handleAddTimetableItem(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1">Gün Seçin</label>
+                    <select id="ttDaySelect" required class="glass-input w-full px-4 py-2.5 rounded-xl">
+                        <option value="Pazartesi" class="bg-gray-900">Pazartesi</option>
+                        <option value="Salı" class="bg-gray-900">Salı</option>
+                        <option value="Çarşamba" class="bg-gray-900">Çarşamba</option>
+                        <option value="Perşembe" class="bg-gray-900">Perşembe</option>
+                        <option value="Cuma" class="bg-gray-900">Cuma</option>
+                        <option value="Cumartesi" class="bg-gray-900">Cumartesi</option>
+                        <option value="Pazar" class="bg-gray-900">Pazar</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1">Ders Başlığı</label>
+                    <input type="text" id="ttSubjectInput" required placeholder="Örn: Matematik - Problem Çözümü" class="glass-input w-full px-4 py-2.5 rounded-xl">
+                </div>
+
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1">Saat / Zaman Dilimi</label>
+                    <input type="text" id="ttTimeInput" placeholder="Örn: 16:00 - 18:00 veya 2 Saat" class="glass-input w-full px-4 py-2.5 rounded-xl">
+                </div>
+
+                <button type="submit" class="w-full py-3 bg-gradient-to-r from-neon-purple to-neon-cyan text-white font-bold rounded-xl shadow-neon-purple">
+                    Programa Ekle
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT APP LOGIC -->
+    <script>
+        // --- DATA STATE ---
+        let appData = {
+            username: '',
+            dailyGoal: 200,
+            questionLogs: [],
+            timetable: {
+                'Pazartesi': [],
+                'Salı': [],
+                'Çarşamba': [],
+                'Perşembe': [],
+                'Cuma': [],
+                'Cumartesi': [],
+                'Pazar': []
+            }
+        };
+
+        let subjectChartInstance = null;
+        let accuracyChartInstance = null;
+
+        // --- NAVIGATION & USER AUTH FUNCTIONS ---
+        function showLoginScreen() {
+            document.getElementById('loginSection').classList.remove('hidden');
+            document.getElementById('appSection').classList.add('hidden');
+        }
+
+        function showAppScreen() {
+            document.getElementById('loginSection').classList.add('hidden');
+            document.getElementById('appSection').classList.remove('hidden');
+
+            // Kullanıcı bilgilerini ekrana yaz
+            const username = appData.username || 'Öğrenci';
+            document.getElementById('displayUsername').innerText = username;
+            document.getElementById('welcomeUser').innerText = username;
+            document.getElementById('userInitial').innerText = username.charAt(0).toUpperCase();
+
+            // İlk verileri yükle ve render et
+            renderDashboard();
+            renderQuestionLogs();
+            renderTimetable();
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const inputVal = document.getElementById('usernameInput').value.trim();
+            if (inputVal) {
+                appData.username = inputVal;
+                saveData();
+                showAppScreen();
+            }
+        }
+
+        function logout() {
+            if (confirm("Kullanıcı profilini değiştirmek/çıkış yapmak istiyor musunuz?")) {
+                appData.username = '';
+                saveData();
+                document.getElementById('usernameInput').value = '';
+                showLoginScreen();
+            }
+        }
+
+        function switchTab(tabName) {
+            // Tab Butonları Stil Güncelleme
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            const activeTabBtn = document.getElementById(`tab-${tabName}`);
+            if (activeTabBtn) activeTabBtn.classList.add('active');
+
+            // Sayfaları Gizle/Göster
+            document.getElementById('page-dashboard').classList.add('hidden');
+            document.getElementById('page-questions').classList.add('hidden');
+            document.getElementById('page-timetable').classList.add('hidden');
+
+            const pageToShow = document.getElementById(`page-${tabName}`);
+            if (pageToShow) pageToShow.classList.remove('hidden');
+
+            if (tabName === 'dashboard') {
+                renderDashboard();
+            } else if (tabName === 'questions') {
+                renderQuestionLogs();
+            } else if (tabName === 'timetable') {
+                renderTimetable();
+            }
+        }
+
+        function setDailyGoalPrompt() {
+            const newGoal = prompt("Yeni günlük soru hedefinizi giriniz:", appData.dailyGoal || 200);
+            if (newGoal !== null && !isNaN(newGoal) && parseInt(newGoal) > 0) {
+                appData.dailyGoal = parseInt(newGoal);
+                saveData();
+                renderDashboard();
+            }
+        }
+
+        // --- INIT & LOCAL STORAGE ---
+        window.onload = function() {
+            // Bugünün tarihini input'a otomatik koy
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('logDateInput').value = today;
+
+            // Kayıtlı verileri çek
+            loadSavedData();
+
+            if (appData.username && appData.username.trim() !== '') {
+                showAppScreen();
+            } else {
+                showLoginScreen();
+            }
+        };
+
+        function loadSavedData() {
+            const saved = localStorage.getItem('studyPulseData');
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    appData = { ...appData, ...parsed };
+                } catch(e) {
+                    console.error("Veri yükleme hatası", e);
+                }
+            }
+        }
+
+        function saveData() {
+            localStorage.setItem('studyPulseData', JSON.stringify(appData));
+        }
+
+        // --- DASHBOARD RENDER ---
+        function renderDashboard() {
+            const todayStr = new Date().toISOString().split('T')[0];
+
+            // Bugün çözülen tüm soru verileri
+            const todayLogs = appData.questionLogs.filter(log => log.date === todayStr);
+
+            let todayTotal = 0;
+            let todayCorrect = 0;
+            let todayWrong = 0;
+            let todayBlank = 0;
+
+            todayLogs.forEach(log => {
+                todayCorrect += parseInt(log.correct || 0);
+                todayWrong += parseInt(log.wrong || 0);
+                todayBlank += parseInt(log.blank || 0);
+            });
+            todayTotal = todayCorrect + todayWrong + todayBlank;
+            const todayNet = (todayCorrect - (todayWrong / 4)).toFixed(2);
+
+            // Tüm zamanlar istatistikleri
+            let allTimeTotal = 0;
+            let allTimeCorrect = 0;
+            let allTimeWrong = 0;
+            let allTimeBlank = 0;
+
+            appData.questionLogs.forEach(log => {
+                allTimeCorrect += parseInt(log.correct || 0);
+                allTimeWrong += parseInt(log.wrong || 0);
+                allTimeBlank += parseInt(log.blank || 0);
+            });
+            allTimeTotal = allTimeCorrect + allTimeWrong + allTimeBlank;
+            const allTimeNet = (allTimeCorrect - (allTimeWrong / 4)).toFixed(2);
+
+            // Başarı Yüzdesi (Tüm Zamanlar)
+            const accuracyPercent = allTimeTotal > 0 ? Math.round((allTimeCorrect / allTimeTotal) * 100) : 0;
+
+            // Hedef Oranı
+            const goal = appData.dailyGoal || 200;
+            const progressPercent = Math.min(Math.round((todayTotal / goal) * 100), 100);
+
+            // UI Güncelle
+            document.getElementById('statTodayTotal').innerText = todayTotal;
+            document.getElementById('statTodayNet').innerText = todayNet > 0 ? todayNet : 0;
+            document.getElementById('statDailyGoal').innerText = goal;
+            document.getElementById('statAccuracyPercent').innerText = `%${accuracyPercent}`;
+            document.getElementById('statAllTimeNet').innerText = allTimeNet > 0 ? allTimeNet : 0;
+            document.getElementById('statAllTimeTotal').innerText = allTimeTotal;
+
+            // Progress Bar
+            document.getElementById('progressBarText').innerText = `${todayTotal} / ${goal} Soru`;
+            document.getElementById('progressBarFill').style.width = `${progressPercent}%`;
+
+            // Ders bazlı detaylar (Bugünkü)
+            const subjectMap = {};
+            todayLogs.forEach(log => {
+                const c = parseInt(log.correct || 0);
+                const w = parseInt(log.wrong || 0);
+                const b = parseInt(log.blank || 0);
+                const net = c - (w / 4);
+
+                if (!subjectMap[log.subject]) {
+                    subjectMap[log.subject] = { correct: 0, wrong: 0, blank: 0, total: 0, net: 0 };
+                }
+                subjectMap[log.subject].correct += c;
+                subjectMap[log.subject].wrong += w;
+                subjectMap[log.subject].blank += b;
+                subjectMap[log.subject].total += (c + w + b);
+                subjectMap[log.subject].net += net;
+            });
+
+            // Ders Listesi Render
+            const breakdownContainer = document.getElementById('subjectBreakdownList');
+            breakdownContainer.innerHTML = '';
+
+            if (Object.keys(subjectMap).length === 0) {
+                breakdownContainer.innerHTML = `
+                    <div class="text-center py-8 text-gray-500 text-sm">
+                        <i class="fa-solid fa-clipboard-list text-2xl mb-2 block"></i>
+                        Bugün henüz soru kaydı eklemediniz.
+                    </div>
+                `;
+            } else {
+                for (const [subj, data] of Object.entries(subjectMap)) {
+                    const acc = data.total > 0 ? Math.round((data.correct / data.total) * 100) : 0;
+                    breakdownContainer.innerHTML += `
+                        <div class="bg-white/5 p-3 rounded-xl border border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <div>
+                                <span class="font-semibold text-sm text-gray-200">${subj}</span>
+                                <div class="text-xs text-gray-400 mt-0.5 flex gap-2">
+                                    <span class="text-neon-green"><i class="fa-solid fa-check"></i> ${data.correct}D</span>
+                                    <span class="text-red-400"><i class="fa-solid fa-xmark"></i> ${data.wrong}Y</span>
+                                    <span class="text-amber-400"><i class="fa-regular fa-circle"></i> ${data.blank}B</span>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-4 text-right">
+                                <div>
+                                    <div class="text-xs text-gray-400">Net</div>
+                                    <div class="font-bold text-neon-cyan text-sm">${data.net.toFixed(2)}</div>
+                                </div>
+                                <div class="w-12 text-center bg-white/5 py-1 rounded-lg border border-white/5">
+                                    <div class="text-[10px] text-gray-400">Başarı</div>
+                                    <div class="font-bold text-xs text-neon-green">%${acc}</div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+
+            // D/Y/B Grafik Render
+            renderAccuracyChart(allTimeCorrect, allTimeWrong, allTimeBlank);
+        }
+
+        // --- CHART.JS ACCURACY RENDER ---
+        function renderAccuracyChart(correct, wrong, blank) {
+            const ctx = document.getElementById('accuracyChart').getContext('2d');
+
+            if (accuracyChartInstance) {
+                accuracyChartInstance.destroy();
+            }
+
+            const total = correct + wrong + blank;
+
+            if (total === 0) {
+                accuracyChartInstance = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Veri Yok'],
+                        datasets: [{
+                            data: [1],
+                            backgroundColor: ['rgba(255, 255, 255, 0.1)'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } }
+                    }
+                });
+                return;
+            }
+
+            accuracyChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Doğru', 'Yanlış', 'Boş'],
+                    datasets: [{
+                        data: [correct, wrong, blank],
+                        backgroundColor: ['#00ff88', '#f15bb5', '#ffb703'],
+                        borderWidth: 2,
+                        borderColor: '#161b26'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                color: '#cbd5e1',
+                                font: { family: 'Inter', size: 11 }
+                            }
+                        }
+                    },
+                    cutout: '65%'
+                }
+            });
+        }
+
+        // --- QUESTION TRACKER LOGIC ---
+        function handleAddQuestions(e) {
+            e.preventDefault();
+
+            const subject = document.getElementById('subjectSelect').value;
+            const correct = parseInt(document.getElementById('correctInput').value) || 0;
+            const wrong = parseInt(document.getElementById('wrongInput').value) || 0;
+            const blank = parseInt(document.getElementById('blankInput').value) || 0;
+            const date = document.getElementById('logDateInput').value;
+            const note = document.getElementById('noteInput').value.trim();
+
+            if (!subject || (correct === 0 && wrong === 0 && blank === 0) || !date) {
+                alert("Lütfen en az 1 soru sayısı girdiğinizden emin olun.");
+                return;
+            }
+
+            const net = parseFloat((correct - (wrong / 4)).toFixed(2));
+
+            const newLog = {
+                id: Date.now(),
+                subject,
+                correct,
+                wrong,
+                blank,
+                net,
+                date,
+                note
+            };
+
+            appData.questionLogs.unshift(newLog); // En başa ekle
+            saveData();
+
+            // Formu Temizle
+            document.getElementById('correctInput').value = '0';
+            document.getElementById('wrongInput').value = '0';
+            document.getElementById('blankInput').value = '0';
+            document.getElementById('noteInput').value = '';
+
+            renderQuestionLogs();
+            renderDashboard();
+
+            alert("Soru ve Net kaydı başarıyla eklendi! 🎉");
+        }
+
+        function renderQuestionLogs() {
+            const tbody = document.getElementById('logsTableBody');
+            tbody.innerHTML = '';
+
+            if (appData.questionLogs.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="py-6 text-center text-gray-500">
+                            Henüz eklenmiş soru kaydı bulunmuyor.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            appData.questionLogs.forEach(log => {
+                const total = (log.correct || 0) + (log.wrong || 0) + (log.blank || 0);
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-white/5 transition-colors border-b border-white/5";
+
+                tr.innerHTML = `
+                    <td class="py-3 px-2 text-xs text-gray-400">${log.date}</td>
+                    <td class="py-3 px-2">
+                        <div class="font-semibold text-white">${log.subject}</div>
+                        ${log.note ? `<div class="text-[11px] text-gray-400">${log.note}</div>` : ''}
+                    </td>
+                    <td class="py-3 px-2 text-center text-xs">
+                        <span class="text-neon-green font-bold">${log.correct || 0}D</span> / 
+                        <span class="text-red-400 font-bold">${log.wrong || 0}Y</span> / 
+                        <span class="text-amber-400 font-bold">${log.blank || 0}B</span>
+                    </td>
+                    <td class="py-3 px-2 text-right font-semibold text-gray-200">${total} Soru</td>
+                    <td class="py-3 px-2 text-right font-bold text-neon-cyan">${log.net !== undefined ? log.net : (log.correct - ((log.wrong || 0)/4)).toFixed(2)} Net</td>
+                    <td class="py-3 px-2 text-center">
+                        <button onclick="deleteLog(${log.id})" class="text-gray-500 hover:text-red-400 p-1">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </td>
+                `;
+
+                tbody.appendChild(tr);
+            });
+        }
+
+        function deleteLog(id) {
+            appData.questionLogs = appData.questionLogs.filter(log => log.id !== id);
+            saveData();
+            renderQuestionLogs();
+            renderDashboard();
+        }
+
+        function clearAllLogs() {
+            if (confirm("Tüm soru kayıtlarınızı silmek istediğinize emin misiniz?")) {
+                appData.questionLogs = [];
+                saveData();
+                renderQuestionLogs();
+                renderDashboard();
+            }
+        }
+
+        // --- TIMETABLE LOGIC ---
+        const daysOfWeek = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'];
+
+        function renderTimetable() {
+            const grid = document.getElementById('timetableDaysGrid');
+            grid.innerHTML = '';
+
+            daysOfWeek.forEach(day => {
+                const items = appData.timetable[day] || [];
+
+                let itemsHtml = '';
+                if (items.length === 0) {
+                    itemsHtml = `<p class="text-xs text-gray-600 italic py-2">Ders/Konu yok</p>`;
+                } else {
+                    items.forEach((item, index) => {
+                        itemsHtml += `
+                            <div class="bg-white/5 p-2.5 rounded-xl border border-white/5 relative group mb-2">
+                                <button onclick="deleteTimetableItem('${day}', ${index})" class="absolute top-2 right-2 text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <i class="fa-solid fa-trash-can text-xs"></i>
+                                </button>
+                                <div class="font-semibold text-xs text-neon-cyan">${item.subject}</div>
+                                ${item.time ? `<div class="text-[10px] text-gray-400 mt-1"><i class="fa-regular fa-clock mr-1"></i>${item.time}</div>` : ''}
+                            </div>
+                        `;
+                    });
+                }
+
+                grid.innerHTML += `
+                    <div class="glass-panel p-4 rounded-2xl flex flex-col justify-between border-t-2 border-t-neon-purple/50">
+                        <div>
+                            <h4 class="font-outfit font-bold text-sm text-gray-200 mb-3 pb-2 border-b border-white/10 flex items-center justify-between">
+                                <span>${day}</span>
+                                <span class="text-[10px] bg-white/10 px-2 py-0.5 rounded-full text-gray-400">${items.length} Task</span>
+                            </h4>
+                            <div class="space-y-1">
+                                ${itemsHtml}
+                            </div>
+                        </div>
+                        <button onclick="openTimetableModal('${day}')" class="w-full mt-3 py-1.5 rounded-lg border border-dashed border-white/20 hover:border-neon-cyan/50 text-[11px] text-gray-400 hover:text-neon-cyan transition-all text-center">
+                            + Ekle
+                        </button>
+                    </div>
+                `;
+            });
+        }
+
+        function openTimetableModal(day = 'Pazartesi') {
+            document.getElementById('ttDaySelect').value = day;
+            document.getElementById('timetableModal').classList.remove('hidden');
+        }
+
+        function closeTimetableModal() {
+            document.getElementById('timetableModal').classList.add('hidden');
+        }
+
+        function handleAddTimetableItem(e) {
+            e.preventDefault();
+            const day = document.getElementById('ttDaySelect').value;
+            const subject = document.getElementById('ttSubjectInput').value.trim();
+            const time = document.getElementById('ttTimeInput').value.trim();
+
+            if (!subject) return;
+
+            if (!appData.timetable[day]) {
+                appData.timetable[day] = [];
+            }
+
+            appData.timetable[day].push({ subject, time });
+            saveData();
+
+            document.getElementById('ttSubjectInput').value = '';
+            document.getElementById('ttTimeInput').value = '';
+
+            closeTimetableModal();
+            renderTimetable();
+        }
+
+        function deleteTimetableItem(day, index) {
+            appData.timetable[day].splice(index, 1);
+            saveData();
+            renderTimetable();
+        }
+    </script>
+</body>
+</html>
+```
+
+### GitHub'da Yapmanız Gerekenler:
+1. Yukarıdaki kod kümetinin sağ üstündeki **"Copy"** butonuna basarak tüm kodu kopyalayın.
+2. GitHub ekranındaki siyah kutuya yapıştırın.
+3. Sayfanın altındaki yeşil **"Commit changes"** butonuna basın.
